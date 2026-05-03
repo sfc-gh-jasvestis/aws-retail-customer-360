@@ -142,14 +142,6 @@ SELECT
 -- Expected: 5000, 100000, 5000, 5000
 ```
 
-### Gotchas / Known Issues
-- **Bedrock model versions**: Newer Claude models require inference profiles (e.g., `us.anthropic.claude-sonnet-4-5-20250929-v1:0`). Direct model IDs like `anthropic.claude-3-5-sonnet-*` are deprecated.
-- **SES sandbox**: In sandbox mode, both sender AND recipient must be verified. For demo, sender and recipient are set to the same verified email.
-- **Cortex Analyst in SiS**: Use `_snowflake.send_snow_api_request("POST", "/api/v2/cortex/analyst/message", ...)` -- NOT `_snowflake.send_message()` which doesn't exist.
-- **Customer names**: Synthetic data has ~42 duplicate name combinations (e.g., 42 "Wei Chen"). Search by CUSTOMER_ID for unique results.
-- **DT segment CASE order**: Recency checks (At Risk, Hibernating) must come BEFORE spend checks (Champions, Loyal) or dormant high-spenders get misclassified.
-- **QuickSight datasets**: Use DIRECT_QUERY mode (not SPICE) so dashboards refresh automatically when DTs update.
-
 ## Legal
 
 Licensed under the Apache License, Version 2.0.
