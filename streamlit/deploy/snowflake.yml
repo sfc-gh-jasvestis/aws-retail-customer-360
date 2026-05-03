@@ -1,0 +1,16 @@
+definition_version: 2
+
+entities:
+  customer_360_hub_app:
+    type: streamlit
+    identifier:
+      name: CUSTOMER_360_HUB_APP
+      schema: APP
+      database: RETAIL_CUSTOMER_360
+    title: "Customer 360 & Loyalty Hub"
+    comment: "Retail/CPG Demo — Snowflake AI + Amazon Bedrock + SES"
+    query_warehouse: WH_CUSTOMER_360
+    main_file: streamlit_app.py
+    stage: RETAIL_CUSTOMER_360.APP.STREAMLIT_STAGE
+    artifacts:
+      - streamlit_app.py
