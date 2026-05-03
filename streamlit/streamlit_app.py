@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import json
+import _snowflake
 from snowflake.snowpark.context import get_active_session
 
 session = get_active_session()
@@ -14,15 +15,15 @@ div[data-testid="stMetric"] {border: 1px solid #e0e0e0; border-radius: 8px; padd
 """, unsafe_allow_html=True)
 
 st.title("Customer 360 & Loyalty Hub")
-st.caption("Retail/CPG Demo — Snowflake AI + Amazon Bedrock + SES + QuickSight")
+st.caption("Retail/CPG Demo — Snowflake AI + Amazon Bedrock + Amazon SES + Cortex Analyst")
 
 with st.sidebar:
     st.markdown("### Personalization Engine")
     st.markdown("""
     Customer data stays in **Snowflake** — governed, no copies.
-    **Cortex AI** scores sentiment. **Snowflake ML** predicts churn.
-    **Amazon Bedrock** writes re-engagement messages.
-    **Amazon SES** sends them automatically.
+    **Snowflake ML** predicts churn. **Amazon Bedrock** writes
+    personalized re-engagement messages. **Amazon SES** sends
+    them automatically. **Cortex Analyst** answers questions.
     """)
     st.divider()
     tier_filter = st.multiselect("Filter by Tier", ["Gold", "Silver", "Bronze"], default=["Gold", "Silver", "Bronze"])
@@ -84,12 +85,17 @@ with tab1:
 
     st.divider()
     st.subheader("Customer Lookup")
-    search_name = st.text_input("Search by name or ID:", placeholder="e.g., Wei Chen or CUST-00001")
+    search_name = st.text_input("Search by name or ID:", placeholder="e.g., CUST-00001 or Sakura")
     if search_name:
-        safe_search = search_name.replace("'", "''")
+        parts = search_name.strip().replace("'", "''").split()
+        if len(parts) >= 2:
+            where = f"(FIRST_NAME ILIKE '%{parts[0]}%' AND LAST_NAME ILIKE '%{parts[1]}%')"
+        else:
+            t = parts[0]
+            where = f"(CUSTOMER_ID ILIKE '%{t}%' OR FIRST_NAME ILIKE '%{t}%' OR LAST_NAME ILIKE '%{t}%')"
         profile = session.sql(f"""
             SELECT * FROM RETAIL_CUSTOMER_360.CURATED.CUSTOMER_PROFILE
-            WHERE CUSTOMER_ID ILIKE '%{safe_search}%' OR FIRST_NAME ILIKE '%{safe_search}%' OR LAST_NAME ILIKE '%{safe_search}%'
+            WHERE {where}
             LIMIT 10
         """).to_pandas()
         if profile.empty:
@@ -126,7 +132,7 @@ with tab2:
 
 with tab3:
     st.header("Churn Risk")
-    st.markdown("**Snowflake ML CLASSIFICATION** — predicts churn risk for every customer. No Python, no SageMaker.")
+    st.markdown("**Snowflake ML CLASSIFICATION** — predicts churn risk for every customer. No Python, no infrastructure to manage.")
     st.divider()
 
     churn_df = session.sql("""
@@ -156,11 +162,11 @@ with tab3:
 
 with tab4:
     st.header("Personalized Actions")
-    st.markdown("Select a customer and generate a **personalized re-engagement message** using **Amazon Bedrock** (Claude).")
+    st.markdown("Select a customer and generate a **personalized re-engagement message** using **Amazon Bedrock** (Claude), then send it via **Amazon SES**.")
     st.divider()
 
     at_risk_list = session.sql("""
-        SELECT cp.CUSTOMER_ID, cp.FIRST_NAME, cp.LAST_NAME, cp.TIER, cp.CITY, cp.COUNTRY,
+        SELECT cp.CUSTOMER_ID, cp.FIRST_NAME, cp.LAST_NAME, cp.EMAIL, cp.TIER, cp.CITY, cp.COUNTRY,
                cp.LIFETIME_SPEND, cp.AVG_BASKET, cp.DAYS_SINCE_LAST_TXN, cp.LOYALTY_POINTS,
                cp.CUSTOMER_SEGMENT, cp.AVG_FEEDBACK_RATING
         FROM RETAIL_CUSTOMER_360.CURATED.CUSTOMER_PROFILE cp
@@ -182,7 +188,7 @@ with tab4:
             st.markdown(f"**Name:** {cust['FIRST_NAME']} {cust['LAST_NAME']}")
             st.markdown(f"**Tier:** {cust['TIER']} | **Segment:** {cust['CUSTOMER_SEGMENT']}")
             st.markdown(f"**Location:** {cust['CITY']}, {cust['COUNTRY']}")
-            st.markdown(f"**Lifetime Spend:** ${float(cust['LIFETIME_SPEND']):,.2f} | **Avg Basket:** ${float(cust['AVG_BASKET']):,.2f}")
+            st.markdown(f"**Lifetime Spend:** \${float(cust['LIFETIME_SPEND']):,.2f} | **Avg Basket:** \${float(cust['AVG_BASKET']):,.2f}")
             st.markdown(f"**Last Purchase:** {int(cust['DAYS_SINCE_LAST_TXN'])} days ago")
         with col_r:
             st.metric("Loyalty Points", f"{int(cust['LOYALTY_POINTS']):,}")
@@ -190,7 +196,7 @@ with tab4:
 
         st.divider()
         if st.button("Generate Personalized NBA with Bedrock", type="primary", use_container_width=True):
-            with st.spinner("Amazon Bedrock generating personalized next-best-action..."):
+            with st.spinner("Amazon Bedrock (Claude) generating personalized next-best-action..."):
                 safe_name = f"{cust['FIRST_NAME']} {cust['LAST_NAME']}"
                 prompt = f"""You are a customer retention specialist for an APJ retail company.
 Generate a personalized re-engagement strategy for this at-risk customer:
@@ -206,10 +212,14 @@ Avg Feedback Rating: {float(cust['AVG_FEEDBACK_RATING']):.1f}/5
 
 Respond in JSON with: recommended_action, offer_type, offer_details, email_subject, email_body (max 3 sentences), urgency (HIGH/MEDIUM/LOW), estimated_retention_probability"""
 
-                safe_prompt = prompt.replace("'", "''").replace("\\", "\\\\")
-                result = session.sql(f"""
-                    SELECT SNOWFLAKE.CORTEX.COMPLETE('claude-4-sonnet', '{safe_prompt}')
-                """).collect()[0][0]
+                safe_prompt = prompt.replace("'", "''")
+                try:
+                    result = session.sql(f"SELECT RETAIL_CUSTOMER_360.AI.BEDROCK_GENERATE_NBA('{safe_prompt}')").collect()[0][0]
+                except Exception:
+                    result = session.sql(f"""
+                        SELECT SNOWFLAKE.CORTEX.COMPLETE('claude-4-sonnet', '{safe_prompt}')
+                    """).collect()[0][0]
+                    st.caption("_Fallback: used Cortex Complete (Bedrock unavailable)_")
 
                 try:
                     answer = str(result).strip()
@@ -221,6 +231,8 @@ Respond in JSON with: recommended_action, offer_type, offer_details, email_subje
                     elif "```" in answer:
                         answer = answer.split("```")[1].split("```")[0].strip()
                     nba = json.loads(answer)
+                    st.session_state['last_nba'] = nba
+                    st.session_state['last_cust_email'] = cust.get('EMAIL', '')
 
                     urgency_color = {"HIGH": "red", "MEDIUM": "orange", "LOW": "green"}.get(nba.get("urgency", ""), "gray")
                     st.markdown(f"### Urgency: :{urgency_color}[{nba.get('urgency', 'N/A')}]")
@@ -230,29 +242,62 @@ Respond in JSON with: recommended_action, offer_type, offer_details, email_subje
                     r2.metric("Offer", nba.get("offer_type", "N/A"))
                     r3.metric("Retention Prob", nba.get("estimated_retention_probability", "N/A"))
 
-                    st.info(f"**Offer:** {nba.get('offer_details', 'N/A')}")
+                    offer = nba.get('offer_details', 'N/A')
+                    if isinstance(offer, dict):
+                        offer_lines = [f"- **{k.replace('_', ' ').title()}:** {v}" for k, v in offer.items()]
+                        st.info("**Offer Details**\n\n" + "\n".join(offer_lines))
+                    else:
+                        st.info(f"**Offer:** {offer}")
 
                     st.divider()
                     st.markdown("### Email Preview")
                     st.markdown(f"**Subject:** {nba.get('email_subject', 'N/A')}")
-                    body = nba.get("email_body", "N/A").replace('$', '\\$')
+                    body = nba.get("email_body", "N/A")
+                    if isinstance(body, str):
+                        body = body.replace('$', '\\$')
                     st.markdown(f"> {body}")
                 except Exception as parse_err:
                     st.warning(f"Could not parse structured response. Raw output:")
                     st.markdown(str(result).replace('$', '\\$'))
 
+        if st.session_state.get('last_nba') and not st.session_state.get('ses_sent'):
+            st.divider()
+            st.markdown("### Send via Amazon SES")
+            nba = st.session_state['last_nba']
+            cust_email = st.session_state.get('last_cust_email', '')
+            demo_recipient = 'jonathan.asvestis@snowflake.com'
+            st.markdown(f"**To:** {cust_email} (demo: {demo_recipient})")
+            st.markdown(f"**Subject:** {nba.get('email_subject', 'N/A')}")
+            if st.button("Send Re-engagement Email via SES", type="secondary", use_container_width=True):
+                with st.spinner("Sending email via Amazon SES..."):
+                    email_html = f"<h2>{nba.get('email_subject', '')}</h2><p>{nba.get('email_body', '')}</p><p><em>Offer: {nba.get('offer_details', '')}</em></p>"
+                    safe_subject = nba.get('email_subject', 'Re-engagement').replace("'", "''")
+                    safe_html = email_html.replace("'", "''")
+                    ses_result = session.sql(f"""
+                        SELECT RETAIL_CUSTOMER_360.AI.SES_SEND_EMAIL(
+                            '{demo_recipient}', '{safe_subject}', '{safe_html}', '{demo_recipient}')
+                    """).collect()[0][0]
+                    ses_resp = json.loads(ses_result)
+                    if ses_resp.get('status') == 'sent':
+                        st.success(f"Email sent to {demo_recipient} (Message ID: {ses_resp['message_id']})")
+                    elif ses_resp.get('status') == 'sandbox_restricted':
+                        st.warning("SES sandbox mode — sender/recipient must be verified.")
+                    else:
+                        st.error(f"SES error: {ses_resp.get('error', 'Unknown')}")
+                    st.session_state['last_nba'] = None
+
 
 with tab5:
     st.header("Ask Customer")
-    st.markdown("Ask questions in **natural language** — powered by **Snowflake Cortex Agent** via Semantic View.")
+    st.markdown("Ask questions in **natural language** — powered by **Cortex Analyst** via Semantic View.")
     st.divider()
 
     sample_questions = [
-        "How many Gold customers have churn risk?",
-        "What is the average CLV by country?",
+        "What is the average lifetime spend by country?",
         "Which campaigns had the highest conversion rate?",
-        "Show me customer segments with declining spend",
-        "How many customers have open support tickets?",
+        "How many customers are in each segment?",
+        "What is the average basket size for Gold tier?",
+        "Show total campaign budget by channel",
     ]
 
     q_cols = st.columns(3)
@@ -262,36 +307,51 @@ with tab5:
             if st.button(q, key=f"agent_{i}", use_container_width=True):
                 selected_q = q
 
-    agent_input = st.text_input("Or ask your own question:", placeholder="e.g., Which segments are most at risk?", key="agent_q")
+    agent_input = st.text_input("Or ask your own question:", placeholder="e.g., What is the average loyalty points by tier?", key="agent_q")
     agent_query = selected_q or agent_input
 
     if agent_query:
         st.markdown(f"**Question:** {agent_query}")
-        with st.spinner("Querying Semantic View..."):
+        with st.spinner("Cortex Analyst querying Semantic View..."):
             try:
-                safe_aq = agent_query.replace("'", "''")
-                result = session.sql(f"""
-                    SELECT SNOWFLAKE.CORTEX.COMPLETE('claude-4-sonnet',
-                        'You are a customer analytics expert. Generate a SQL query against the semantic view RETAIL_CUSTOMER_360.AI.CUSTOMER_360_SEMANTIC_VIEW. Tables: profile (customer profiles), segments (segment aggregates), campaigns (campaign performance). Return ONLY the SQL.
+                request_body = {
+                    "messages": [{"role": "user", "content": [{"type": "text", "text": agent_query}]}],
+                    "semantic_view": "RETAIL_CUSTOMER_360.AI.CUSTOMER_360_SEMANTIC_VIEW"
+                }
+                resp = _snowflake.send_snow_api_request(
+                    "POST", "/api/v2/cortex/analyst/message", {}, {}, request_body, None, 30000
+                )
+                parsed = json.loads(resp["content"])
+                if resp["status"] >= 400:
+                    st.error(f"Cortex Analyst error: {parsed.get('message', 'Unknown error')}")
+                else:
+                    analyst_text = ""
+                    analyst_sql = ""
+                    analyst_suggestions = []
+                    for content_block in parsed.get("message", {}).get("content", []):
+                        if content_block.get("type") == "text":
+                            analyst_text = content_block.get("text", "")
+                        elif content_block.get("type") == "sql":
+                            analyst_sql = content_block.get("statement", "")
+                        elif content_block.get("type") == "suggestions":
+                            analyst_suggestions = content_block.get("suggestions", [])
 
-                        Question: {safe_aq}')
-                """).collect()[0][0]
-                sql_text = str(result).strip()
-                if sql_text.startswith('"'):
-                    sql_text = sql_text[1:-1]
-                sql_text = sql_text.replace("\\n", "\n")
-                if "```sql" in sql_text:
-                    sql_text = sql_text.split("```sql")[1].split("```")[0].strip()
-                elif "```" in sql_text:
-                    sql_text = sql_text.split("```")[1].split("```")[0].strip()
+                    if analyst_text:
+                        st.markdown(analyst_text)
 
-                with st.expander("Generated SQL", expanded=False):
-                    st.code(sql_text, language="sql")
-
-                try:
-                    answer_df = session.sql(sql_text).to_pandas()
-                    st.dataframe(answer_df, use_container_width=True)
-                except Exception as sql_err:
-                    st.warning(f"Could not execute generated SQL: {sql_err}")
+                    if analyst_sql:
+                        with st.expander("Generated SQL", expanded=False):
+                            st.code(analyst_sql, language="sql")
+                        try:
+                            answer_df = session.sql(analyst_sql).to_pandas()
+                            st.dataframe(answer_df, use_container_width=True)
+                        except Exception as sql_err:
+                            st.warning(f"Could not execute generated SQL: {sql_err}")
+                    elif analyst_suggestions:
+                        st.info("Your question was ambiguous. Try one of these:")
+                        for s in analyst_suggestions:
+                            st.markdown(f"- {s}")
+                    else:
+                        st.info("Cortex Analyst could not generate a response for this question.")
             except Exception as e:
-                st.error(f"Agent error: {e}")
+                st.error(f"Cortex Analyst error: {e}")
