@@ -1,0 +1,56 @@
+{
+  "DataColorPalette": {
+    "Colors": [
+      "#11567F",
+      "#29B5E8",
+      "#7CC6E8",
+      "#FFA62B",
+      "#FF4B4B",
+      "#2ECC71",
+      "#9B59B6",
+      "#34495E"
+    ],
+    "MinMaxGradient": ["#7CC6E8", "#11567F"],
+    "EmptyFillColor": "#E1E8ED"
+  },
+  "UIColorPalette": {
+    "PrimaryForeground": "#0F1B2D",
+    "PrimaryBackground": "#FFFFFF",
+    "SecondaryForeground": "#5F6B7A",
+    "SecondaryBackground": "#F5F8FA",
+    "Accent": "#11567F",
+    "AccentForeground": "#FFFFFF",
+    "Danger": "#FF4B4B",
+    "DangerForeground": "#FFFFFF",
+    "Warning": "#FFA62B",
+    "WarningForeground": "#FFFFFF",
+    "Success": "#2ECC71",
+    "SuccessForeground": "#FFFFFF",
+    "Dimension": "#11567F",
+    "DimensionForeground": "#FFFFFF",
+    "Measure": "#29B5E8",
+    "MeasureForeground": "#FFFFFF"
+  },
+  "Sheet": {
+    "Tile": {
+      "Border": {
+        "Show": true
+      }
+    },
+    "TileLayout": {
+      "Gutter": {
+        "Show": true
+      },
+      "Margin": {
+        "Show": false
+      }
+    }
+  },
+  "Typography": {
+    "FontFamilies": [
+      {
+        "FontFamily": "sans-serif"
+      }
+    ]
+  }
+}
