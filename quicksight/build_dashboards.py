@@ -170,7 +170,7 @@ FROM FSI_REGULATORY_COMPLIANCE.CURATED.COMPLIANCE_EVENTS""",
         "kpis": [
             {"label": "Total Events", "field": "EVENT_ID", "agg": "DISTINCT_COUNT", "type": "string"},
             {"label": "High Severity", "field": "EVENT_ID", "agg": "DISTINCT_COUNT", "type": "string", "filter": ("SEVERITY", "HIGH")},
-            {"label": "Open", "field": "EVENT_ID", "agg": "DISTINCT_COUNT", "type": "string", "filter": ("STATUS", "OPEN")},
+            {"label": "Flagged", "field": "EVENT_ID", "agg": "DISTINCT_COUNT", "type": "string", "filter": ("STATUS", "FLAGGED")},
             {"label": "Employees Flagged", "field": "EMPLOYEE_NAME", "agg": "DISTINCT_COUNT", "type": "string"},
         ],
         "charts": [
@@ -225,8 +225,8 @@ FROM RETAIL_SUPPLY_CHAIN.CURATED.INVENTORY_HEALTH""",
         "ds_name": "Retail: Inventory Health",
         "kpis": [
             {"label": "Total SKUs", "field": "PRODUCT_ID", "agg": "DISTINCT_COUNT", "type": "string"},
-            {"label": "Stockouts", "field": "PRODUCT_ID", "agg": "DISTINCT_COUNT", "type": "string", "filter": ("INVENTORY_STATUS", "Stockout Risk")},
-            {"label": "Healthy", "field": "PRODUCT_ID", "agg": "DISTINCT_COUNT", "type": "string", "filter": ("INVENTORY_STATUS", "Healthy")},
+            {"label": "Stockouts", "field": "PRODUCT_ID", "agg": "DISTINCT_COUNT", "type": "string", "filter": ("INVENTORY_STATUS", "STOCKOUT")},
+            {"label": "Healthy", "field": "PRODUCT_ID", "agg": "DISTINCT_COUNT", "type": "string", "filter": ("INVENTORY_STATUS", "HEALTHY")},
             {"label": "Inventory Value $M", "field": "INVENTORY_VALUE", "agg": "SUM", "type": "decimal", "scale": 1e6},
         ],
         "charts": [
@@ -368,7 +368,7 @@ FROM CRYPTO_SURVEILLANCE.ANALYTICS.ALERTS""",
         "kpis": [
             {"label": "Total Alerts", "field": "ALERT_ID", "agg": "DISTINCT_COUNT", "type": "string"},
             {"label": "Critical", "field": "ALERT_ID", "agg": "DISTINCT_COUNT", "type": "string", "filter": ("SEVERITY", "CRITICAL")},
-            {"label": "Open", "field": "ALERT_ID", "agg": "DISTINCT_COUNT", "type": "string", "filter": ("STATUS", "OPEN")},
+            {"label": "In Review", "field": "ALERT_ID", "agg": "DISTINCT_COUNT", "type": "string", "filter": ("STATUS", "IN_REVIEW")},
             {"label": "Avg Fraud Probability", "field": "ML_FRAUD_PROBABILITY", "agg": "AVERAGE", "type": "decimal"},
         ],
         "charts": [
@@ -710,22 +710,49 @@ def donut_visual(d, idx, c):
 def build_dashboard_definition(d, ds_arn):
     visuals = []
     layout_elements = []
+    filter_groups = []
 
-    # 4 KPIs row 1: each col 8 wide of 36, height 4
+    # 4 KPIs row 1
     for i, kpi in enumerate(d["kpis"]):
         v = kpi_visual(d, i, kpi)
         vid = list(v.values())[0]["VisualId"]
         visuals.append(v)
         layout_elements.append({
-            "ElementId": vid,
-            "ElementType": "VISUAL",
-            "ColumnIndex": i * 9,
-            "ColumnSpan": 9,
-            "RowIndex": 0,
-            "RowSpan": 5,
+            "ElementId": vid, "ElementType": "VISUAL",
+            "ColumnIndex": i * 9, "ColumnSpan": 9,
+            "RowIndex": 0, "RowSpan": 5,
         })
+        if "filter" in kpi:
+            col, val = kpi["filter"]
+            filter_groups.append({
+                "FilterGroupId": f"fg-{vid}",
+                "Filters": [{
+                    "CategoryFilter": {
+                        "FilterId": f"f-{vid}",
+                        "Column": {"DataSetIdentifier": d["ds_id"], "ColumnName": col},
+                        "Configuration": {
+                            "FilterListConfiguration": {
+                                "MatchOperator": "CONTAINS",
+                                "CategoryValues": [val],
+                                "NullOption": "NON_NULLS_ONLY"
+                            }
+                        }
+                    }
+                }],
+                "ScopeConfiguration": {
+                    "SelectedSheets": {
+                        "SheetVisualScopingConfigurations": [{
+                            "SheetId": f"sheet-{d['id']}",
+                            "Scope": "SELECTED_VISUALS",
+                            "VisualIds": [vid]
+                        }]
+                    }
+                },
+                "Status": "ENABLED",
+                "CrossDataset": "SINGLE_DATASET"
+            })
 
-    # 2 charts row 2: each 18 wide, height 12
+    # 2 charts row 2
     for i, c in enumerate(d["charts"]):
         if c["type"] == "bar":
             v = bar_visual(d, i, c)
@@ -734,12 +761,9 @@ def build_dashboard_definition(d, ds_arn):
         vid = list(v.values())[0]["VisualId"]
         visuals.append(v)
         layout_elements.append({
-            "ElementId": vid,
-            "ElementType": "VISUAL",
-            "ColumnIndex": i * 18,
-            "ColumnSpan": 18,
-            "RowIndex": 5,
-            "RowSpan": 14,
+            "ElementId": vid, "ElementType": "VISUAL",
+            "ColumnIndex": i * 18, "ColumnSpan": 18,
+            "RowIndex": 5, "RowSpan": 14,
         })
 
     sheet = {
@@ -764,13 +788,16 @@ def build_dashboard_definition(d, ds_arn):
         "ContentType": "INTERACTIVE",
     }
 
-    return {
+    defn = {
         "DataSetIdentifierDeclarations": [{
             "DataSetArn": ds_arn,
             "Identifier": d["ds_id"],
         }],
         "Sheets": [sheet],
     }
+    if filter_groups:
+        defn["FilterGroups"] = filter_groups
+    return defn
 
 
 def main():
