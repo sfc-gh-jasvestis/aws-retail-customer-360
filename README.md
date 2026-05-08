@@ -3,37 +3,23 @@
 
 > End-to-end customer intelligence across 12 APJ markets. Snowflake ML detects churn, Amazon Bedrock writes personalized re-engagement offers, Amazon SES delivers the email, Cortex Analyst enables self-serve analytics, and QuickSight powers executive dashboards.
 
+## Architecture
+
+A customer intelligence hub built on **Snowflake** (Dynamic Tables, ML.CLASSIFICATION, ML.FORECAST, Cortex Search, semantic view, Cortex Analyst) and **AWS** (S3, Bedrock Claude Sonnet, SES, QuickSight + Amazon Q). Snowflake ML detects churn; Bedrock writes the next-best-action offer; SES delivers the email; QuickSight serves the executives.
+
+```mermaid
+flowchart LR
+    S3[S3 first-party customer data] --> SF[Snowflake Dynamic Tables CUSTOMER_PROFILE / SEGMENTS / CAMPAIGN_PERF]
+    SF --> ML[ML.CLASSIFICATION churn + ML.FORECAST]
+    SF --> CSearch[Cortex Search 15K feedback + tickets]
+    ML --> BR[Amazon Bedrock Claude]
+    BR --> NBA[Personalized next best action]
+    NBA --> SES[Amazon SES re-engagement email]
+    SF --> SemView[Semantic View]
+    SF --> ST[Streamlit Customer 360 5 tabs]
+    SF --> QS[QuickSight + Amazon Q]
 ```
-Customer Data (first-party) --> Snowflake RAW (5K customers, 100K txns)
-                                       |
-                    +------------------+
-                    v                  v
-             Dynamic Tables       Cortex Search
-             (5 min refresh)    (15K feedback + tickets)
-             |-- CUSTOMER_PROFILE
-             |-- CUSTOMER_SEGMENTS
-             +-- CAMPAIGN_PERF
-                    |
-                    v
-              Snowflake ML
-           +--------+--------+
-           v                 v
-      CLASSIFICATION      FORECAST
-      (churn risk)     (revenue by channel)
-           |
-           v
-    Amazon Bedrock (Claude Sonnet 4.5) --> Personalized NBA
-           |
-           v
-    Amazon SES --> Re-engagement Email
-           |
-           v
-    Streamlit in Snowflake     Amazon QuickSight + Q
-    (analyst: 5 tabs)          (executive dashboards + NLP)
-           |
-           v
-    Cortex Analyst via Semantic View --> Natural Language Q&A
-```
+
 
 ## What It Does
 
