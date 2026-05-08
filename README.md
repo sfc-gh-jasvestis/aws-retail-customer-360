@@ -1,7 +1,6 @@
 # Customer 360 & Loyalty Hub
-### Snowflake + Amazon Bedrock + SES + QuickSight | Retail/CPG
 
-> End-to-end customer intelligence across 12 APJ markets. Snowflake ML detects churn, Amazon Bedrock writes personalized re-engagement offers, Amazon SES delivers the email, Cortex Analyst enables self-serve analytics, and QuickSight powers executive dashboards.
+End-to-end customer intelligence across 12 APJ markets — Snowflake ML detects churn, Amazon Bedrock writes personalized re-engagement offers, Amazon SES delivers the email, and QuickSight powers executive dashboards.
 
 ## Architecture
 
@@ -20,62 +19,17 @@ flowchart LR
     SF --> QS[QuickSight + Amazon Q]
 ```
 
+## Personas
 
-## What It Does
-
-| Capability | Technology | Detail |
-|---|---|---|
-| Customer 360 | Dynamic Tables | Unified profile: spend, frequency, recency, tier, loyalty, sentiment |
-| Segmentation | CASE rules on DTs | Segments: Champions, Loyal, Potential Loyalist, Needs Attention, At Risk |
-| Churn Prediction | Snowflake ML CLASSIFICATION | Multi-class: ACTIVE / AT_RISK / CHURNED (284 at-risk, 7 churned) |
-| Revenue Forecast | Snowflake ML FORECAST | 30-day revenue prediction by channel |
-| Personalization | Amazon Bedrock (Claude Sonnet 4.5) via EAI | Generates personalized NBA per customer |
-| Email Delivery | Amazon SES via EAI | Sends re-engagement emails from Snowflake |
-| Insight Search | Cortex Search | Semantic search over 15K feedback + support tickets |
-| Analyst UI | Streamlit in Snowflake | 5-tab Customer Hub |
-| Executive BI | Amazon QuickSight + Amazon Q | Customer Overview + Campaign Performance dashboards |
-| NL Queries | Cortex Analyst + Semantic View | "What is the average lifetime spend by country?" |
-
-## Two Personas
-
-| Persona | Tool | What they see |
-|---|---|---|
-| **Marketing Analyst** | Streamlit in Snowflake | Customer profiles, segments, churn risk, Bedrock NBA, SES email, Cortex Analyst Q&A |
-| **CMO** | Amazon QuickSight + Amazon Q | CLV by segment & country, campaign performance, NLP queries |
-
-## Key AWS Differentiators
-
-This demo showcases the **detect -> personalize -> deliver** loop:
-1. **Snowflake ML** detects churn risk (CLASSIFICATION)
-2. **Amazon Bedrock** generates a personalized offer (Claude Sonnet 4.5 via EAI)
-3. **Amazon SES** sends the re-engagement email (via EAI)
-4. **Amazon QuickSight** provides executive dashboards + Amazon Q for NLP
-
-No S3 -- first-party customer data stays in Snowflake's governance perimeter.
-
-## Repo Structure
-
-```
-retail-customer-360/
-|-- snowflake/
-|   |-- 00_setup.sql              # DB, schemas, warehouse
-|   +-- 01_integrations.sql       # Bedrock + SES EAIs, network rules, UDFs
-|-- streamlit/
-|   |-- streamlit_app.py          # 5-tab Customer Hub (source of truth)
-|   +-- deploy/                   # Deploy copy + snowflake.yml
-|-- quicksight/
-|   +-- deploy.sh                 # 2 datasets + Q topic
-|-- demo/
-|   +-- demo_script.md            # 3-min recorded demo narration
-+-- README.md
-```
-
-**Note:** SQL files for raw tables (`02_raw_tables.sql`), curated layer (`03_curated.sql`), search (`04_search.sql`), ML (`05_ml.sql`), and semantic view (`08_semantic.sql`) were executed interactively during build. The objects exist in Snowflake but the SQL is not yet extracted to files.
+| Persona | Role | Key Questions |
+|---------|------|---------------|
+| **Marketing Analyst** | CRM & loyalty team lead | "Which customers are at risk of churning?" "What's the best re-engagement offer for this segment?" |
+| **CMO** | Chief Marketing Officer | "What's our CLV by segment and country?" "How are campaigns performing?" |
 
 ## Data
 
-| Table | Rows | Content |
-|---|---|---|
+| Table | Rows | Description |
+|-------|------|-------------|
 | CUSTOMERS | 5,000 | APJ customers across 12 countries, Gold/Silver/Bronze tiers |
 | TRANSACTIONS | 100,000 | Purchase history: In-Store, Online, Mobile, Marketplace |
 | LOYALTY_EVENTS | 50,000 | Points earn/redeem/expire events |
@@ -84,52 +38,39 @@ retail-customer-360/
 | CAMPAIGNS | 200 | Marketing campaigns (Email, Push, SMS, In-App, Social) |
 | CAMPAIGN_RESPONSES | 20,000 | Open/click/convert/unsubscribe events |
 
-## Streamlit App (5 Tabs)
-
-| Tab | Feature | Technology |
-|---|---|---|
-| Customer 360 | Unified profile, KPIs, customer search | Dynamic Tables |
-| Segmentation | Segment distribution, CLV comparison | DTs + CASE rules |
-| Churn Risk | ML predictions, at-risk customer list | Snowflake ML CLASSIFICATION |
-| Personalized Actions | Bedrock NBA generation + SES email send | Amazon Bedrock + SES via EAI |
-| Ask Customer | Natural language queries with SQL generation | Cortex Analyst + Semantic View |
-
-## Quick Start
+## Build Instructions
 
 ### Prerequisites
-- Snowflake account with ACCOUNTADMIN
-- `snow` CLI configured
+- Snowflake account with ACCOUNTADMIN access
+- Cortex AI enabled (ML Functions, Search, Agent)
+- Warehouse: CORTEX (Medium)
 - AWS CLI with Bedrock, SES, QuickSight access (us-west-2)
 
-### Deploy
+### Deployment
+
 ```bash
-# 1. Run SQL setup (00_setup.sql, 01_integrations.sql)
-# 2. Populate secrets with AWS credentials
-ALTER SECRET RETAIL_CUSTOMER_360.AI.BEDROCK_SECRET
-    SET SECRET_STRING = '{"aws_access_key_id":"AKIA...","aws_secret_access_key":"..."}';
-ALTER SECRET RETAIL_CUSTOMER_360.AI.SES_SECRET
-    SET SECRET_STRING = '{"aws_access_key_id":"AKIA...","aws_secret_access_key":"..."}';
-
-# 3. Deploy Streamlit
-snow stage copy streamlit/streamlit_app.py @RETAIL_CUSTOMER_360.APP.STREAMLIT_STAGE --overwrite
-# Then CREATE STREAMLIT ... (see 01_integrations.sql)
-
-# 4. Deploy QuickSight
-bash quicksight/deploy.sh
+snowsql -f snowflake/00_setup.sql
+snowsql -f snowflake/01_integrations.sql
+snowsql -f snowflake/02_raw_tables.sql
+snowsql -f snowflake/03_curated.sql
+snowsql -f snowflake/04_search.sql
+snowsql -f snowflake/05_ml.sql
+snowsql -f snowflake/06_semantic.sql
+snowsql -f snowflake/07_agent.sql
 ```
 
-### Health Check
-```sql
-SELECT
-    (SELECT COUNT(*) FROM RETAIL_CUSTOMER_360.RAW.CUSTOMERS) AS customers,
-    (SELECT COUNT(*) FROM RETAIL_CUSTOMER_360.RAW.TRANSACTIONS) AS transactions,
-    (SELECT COUNT(*) FROM RETAIL_CUSTOMER_360.CURATED.CUSTOMER_PROFILE) AS profiles,
-    (SELECT COUNT(*) FROM RETAIL_CUSTOMER_360.ML.CHURN_PREDICTIONS) AS predictions;
--- Expected: 5000, 100000, 5000, 5000
+### Streamlit App
+```
+RETAIL_CUSTOMER_360.APP.CUSTOMER_360_APP
 ```
 
-## Legal
+## Key Demo Numbers
 
-Licensed under the Apache License, Version 2.0.
+- **284 customers** at risk of churning (ML CLASSIFICATION)
+- **5,000 unified profiles** across 12 APJ markets
+- **15,000 documents** indexed for semantic search (feedback + tickets)
+- **Detect → Personalize → Deliver** loop: Snowflake ML → Bedrock NBA → SES email
 
-This is a personal demo project and is **not an official Snowflake offering**. It comes with no support or warranty.
+## License
+
+Apache 2.0 — See [LICENSE](LICENSE) for details.
