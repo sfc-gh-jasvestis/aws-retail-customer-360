@@ -21,7 +21,7 @@
 | **RAW** | 7 tables | CUSTOMERS (5K), TRANSACTIONS (100K), LOYALTY_EVENTS (50K), FEEDBACK (10K), TICKETS (5K), CAMPAIGNS (200), RESPONSES (20K) |
 | **CURATED** | 3 Dynamic Tables | CUSTOMER_PROFILE (unified 360), CUSTOMER_SEGMENTS, CAMPAIGN_PERFORMANCE |
 | **AI** | Cortex Search + Cortex Analyst | Customer insight search (15K docs), Semantic View for natural language analytics |
-| **ML** | CLASSIFICATION + FORECAST | Churn prediction (284 at-risk, 7 churned), Revenue forecast (30d by channel) |
+| **ML** | Segmentation + FORECAST | Risk segmentation (29 At Risk, 165 Needs Attention), Revenue forecast (30d by channel) |
 | **AWS** | Bedrock + SES + QuickSight | Bedrock generates personalized NBA, SES delivers emails, QuickSight serves exec dashboards |
 
 ---
@@ -52,13 +52,13 @@ A retail company across 12 APJ markets has a loyalty problem. Customers are chur
 
 ### [1:10-1:35] TAB 3: CHURN RISK
 
-> "Now here's where it gets interesting. Snowflake ML Classification has scored every single customer — 284 at risk, 7 already churned. No Python notebooks. No SageMaker. One SQL command trained this model on Snowflake compute."
+> "Now here's where it gets interesting. The Dynamic Table scores every single customer in real time — 29 At Risk, 165 Needs Attention. These aren't static segments — they recalculate every 5 minutes based on recency, spend, and engagement. When a Champion goes silent for 90 days, they flip to At Risk automatically."
 
-**Action**: Point out the 3 KPI cards (Active / At Risk / Churned). Scroll the at-risk table.
+**Action**: Point out the segment KPI cards. Scroll the at-risk table.
 
 ### [1:35-2:20] TAB 4: PERSONALIZED ACTIONS — THE MONEY SHOT
 
-> "This is the part I love. Pick a customer — Mei Lee, Gold tier, Auckland. She hasn't purchased in 61 days. Her feedback rating is 2 out of 5. Something went wrong. Let's fix it."
+> "This is the part I love. Pick a customer — Mei Lee, Gold tier, Auckland. She hasn't purchased in over 60 days. Her feedback rating is 2 out of 5. Something went wrong. Let's fix it."
 
 **Action**: Select Mei Lee. Review her profile card.
 
@@ -106,7 +106,7 @@ A retail company across 12 APJ markets has a loyalty problem. Customers are chur
 2. **Amazon SES** — automated churn re-engagement emails triggered from Snowflake
 3. **Amazon QuickSight** — executive dashboards for the CMO persona (Customer Overview + Campaign Performance)
 4. **Cortex Analyst** — self-serve natural language analytics via Semantic View
-5. **ML Classification** — multi-class churn prediction (not forecast/anomaly)
+5. **Real-time segmentation** — Dynamic Table recalculates risk segments every 5 minutes based on live behavior
 6. **No S3** — first-party customer data stays in Snowflake (no data lake export)
 7. **End-to-end orchestration** — detect, generate, deliver, explore — one platform
 

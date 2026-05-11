@@ -19,6 +19,27 @@ flowchart LR
     SF --> QS[QuickSight + Amazon Q]
 ```
 
+## Snowflake Capabilities
+
+| Capability | Implementation |
+|-----------|---------------|
+| Dynamic Tables | CUSTOMER_PROFILE / SEGMENTS / CAMPAIGN_PERFORMANCE |
+| ML Functions | ML.CLASSIFICATION (churn detection) + ML.FORECAST (revenue) |
+| Cortex Search | 15,000 feedback + support ticket documents indexed |
+| Cortex Agent | CustomerAnalyst + FeedbackSearch tools |
+| Semantic View | Structured analytics over customers, segments, campaigns |
+| Streamlit | 5-tab Customer 360 dashboard |
+
+## AWS Services
+
+| Service | Role in Demo |
+|---------|-------------|
+| Amazon S3 | First-party customer data landing zone |
+| Amazon Bedrock | Claude-powered next-best-action generation |
+| Amazon SES | Automated re-engagement email delivery |
+| Amazon QuickSight | Executive customer intelligence dashboard |
+| Amazon Q | Natural language analytics for CMO |
+
 ## Personas
 
 | Persona | Role | Key Questions |
