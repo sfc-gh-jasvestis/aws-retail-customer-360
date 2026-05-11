@@ -2,10 +2,10 @@
 set -euo pipefail
 
 REGION="us-west-2"
-ACCT="__AWS_ACCOUNT_ID__"
+ACCT=$(aws sts get-caller-identity --query Account --output text)
 DS_ID="fsi-snowflake-ds"
 DS_ARN="arn:aws:quicksight:${REGION}:${ACCT}:datasource/${DS_ID}"
-QS_USER_ARN="arn:aws:quicksight:us-west-2:__AWS_ACCOUNT_ID__:user/default/__AWS_ACCOUNT_ID__"
+QS_USER_ARN="arn:aws:quicksight:us-west-2:${ACCT}:user/default/${ACCT}"
 
 fail() { echo "FAILED: $1"; exit 1; }
 ok()   { echo "  OK: $1"; }
