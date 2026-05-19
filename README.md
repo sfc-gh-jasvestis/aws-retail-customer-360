@@ -101,6 +101,8 @@ Industry research and Snowflake customer outcomes:
 - **Tapestry** (Coach, Kate Spade -- Snowflake customer): 4B+ rows processed daily, data sharing setup from 6-8 weeks to half a day -- snowflake.com/customers
 - **Personalized offers** increase conversion rates 10-30% -- McKinsey
 
+- **Tapestry** (Coach, Kate Spade) reduced data sharing setup from 6-8 weeks to half a day on Snowflake -- snowflake.com/customers
+
 ## Key Demo Numbers
 
 - **284 customers** at risk of churning (ML CLASSIFICATION)
