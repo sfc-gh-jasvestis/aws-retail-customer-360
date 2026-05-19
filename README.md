@@ -93,6 +93,14 @@ Run the SQL scripts in `snowflake/` (skip `01_integrations.sql`) and deploy the 
 ### Full AWS + Snowflake
 Run all SQL scripts including `01_integrations.sql`, deploy the main Streamlit app from `streamlit/`, then run the QuickSight setup from `quicksight/`.
 
+## Business Impact
+
+Industry research and Snowflake customer outcomes:
+- **Acquiring a new customer** costs 5-25x more than retaining an existing one -- Bain & Company
+- **ML churn prediction** reduces customer attrition by 15-25% -- Industry benchmark
+- **Tapestry** (Coach, Kate Spade -- Snowflake customer): 4B+ rows processed daily, data sharing setup from 6-8 weeks to half a day -- snowflake.com/customers
+- **Personalized offers** increase conversion rates 10-30% -- McKinsey
+
 ## Key Demo Numbers
 
 - **284 customers** at risk of churning (ML CLASSIFICATION)
@@ -103,3 +111,5 @@ Run all SQL scripts including `01_integrations.sql`, deploy the main Streamlit a
 ## License
 
 Apache 2.0 — See [LICENSE](LICENSE) for details.
+
+This is a personal demo project and is not an official Snowflake offering. It comes with no support or warranty. Industry metrics cited are from publicly available third-party research and Snowflake customer stories; they represent reported outcomes and are not guarantees of results.
