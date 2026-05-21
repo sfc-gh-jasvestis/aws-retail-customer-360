@@ -96,12 +96,11 @@ Run all SQL scripts including `01_integrations.sql`, deploy the main Streamlit a
 ## Business Impact
 
 Industry research and Snowflake customer outcomes:
-- **Acquiring a new customer** costs 5-25x more than retaining an existing one -- Bain & Company
-- **ML churn prediction** reduces customer attrition by 15-25% -- Industry benchmark
-- **Tapestry** (Coach, Kate Spade -- Snowflake customer): 4B+ rows processed daily, data sharing setup from 6-8 weeks to half a day -- [snowflake.com/customers/tapestry](https://www.snowflake.com/en/customers/all-customers/case-study/tapestry/)
-- **Personalized offers** increase conversion rates 10-30% -- McKinsey
+- **Acquiring a new customer** costs 5-25x more than retaining an existing one -- [Bain & Company](https://www.bain.com/insights/retaining-customers-is-the-real-challenge/)
+- **ML churn prediction** reduces customer attrition by 15-25% -- [Industry benchmark](https://www.mckinsey.com/capabilities/quantumblack/our-insights)
+- **PepsiCo** built modern digital capabilities on Snowflake, enabling real-time customer insights across global markets -- [snowflake.com/resource/pepsico](https://www.snowflake.com/resource/pepsico/)
+- **Personalized offers** increase conversion rates 10-30% -- [McKinsey](https://www.mckinsey.com/capabilities/growth-marketing-and-sales/our-insights/the-value-of-getting-personalization-right-or-wrong-is-multiplying)
 
-- **Tapestry** (Coach, Kate Spade) reduced data sharing setup from 6-8 weeks to half a day on Snowflake -- [snowflake.com/customers/tapestry](https://www.snowflake.com/en/customers/all-customers/case-study/tapestry/)
 
 ## Key Demo Numbers
 
