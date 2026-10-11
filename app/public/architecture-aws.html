@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Singapore Retail Customer 360 - Architecture</title>
+<style>
+/* ===========================================
+   SNOWFLAKE ARCHITECTURE DIAGRAM — GRID THEME
+   Official Snowflake Template January 2026
+   =========================================== */
+
+:root {
+    --sf-blue: #29B5E8;
+    --sf-mid-blue: #11567F;
+    --sf-star-blue: #71D3DC;
+    --sf-orange: #FF9F36;
+    --sf-purple: #7D44CF;
+    --sf-pink: #D45B90;
+    --sf-neutral: #8A999E;
+    --sf-dark: #262626;
+    --sf-white: #FFFFFF;
+    --sf-gray: #5B5B5B;
+    --sf-light-gray: #929292;
+
+    --font-family: Arial, Helvetica, sans-serif;
+    --zone-title-size: clamp(0.9rem, 1.5vw, 1.3rem);
+    --node-label-size: clamp(0.7rem, 1.2vw, 1rem);
+    --description-size: clamp(0.6rem, 1vw, 0.85rem);
+    --connector-label-size: clamp(0.55rem, 0.9vw, 0.75rem);
+    --header-title-size: clamp(1.4rem, 3vw, 2.2rem);
+    --header-subtitle-size: clamp(0.9rem, 1.6vw, 1.2rem);
+    --small-size: clamp(0.55rem, 0.8vw, 0.75rem);
+    --diagram-padding: clamp(1rem, 2vw, 2rem);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration: 0.3s;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: var(--font-family);
+    background: var(--sf-white); color: var(--sf-dark);
+    -webkit-font-smoothing: antialiased;
+}
+
+.diagram-container {
+    width: 100vw; height: 100vh; height: 100dvh;
+    overflow: hidden; display: flex; flex-direction: column;
+    position: relative; background: var(--sf-white);
+}
+
+.diagram-header {
+    flex-shrink: 0; display: flex; align-items: center;
+    gap: clamp(0.5rem, 1vw, 1rem);
+    padding: clamp(0.6rem, 1.2vh, 1rem) var(--diagram-padding);
+    border-bottom: 3px solid var(--sf-blue);
+}
+
+.header-logo svg {
+    width: clamp(28px, 3.5vw, 44px);
+    height: clamp(28px, 3.5vw, 44px);
+    fill: var(--sf-blue);
+}
+
+.diagram-header h1 {
+    font-size: var(--header-title-size);
+    font-weight: 700; text-transform: uppercase;
+    color: var(--sf-dark); line-height: 1.1; letter-spacing: 0.02em;
+}
+
+.diagram-subtitle {
+    font-size: var(--header-subtitle-size);
+    color: var(--sf-gray); font-weight: 400; margin-left: auto;
+}
+
+.diagram-canvas {
+    flex: 1; width: 100%; min-height: 0;
+    cursor: grab; user-select: none;
+}
+.diagram-canvas:active { cursor: grabbing; }
+
+.diagram-footer {
+    flex-shrink: 0; display: flex;
+    justify-content: space-between; align-items: center;
+    padding: clamp(0.3rem, 0.6vh, 0.5rem) var(--diagram-padding);
+    font-size: var(--small-size); color: var(--sf-light-gray);
+    border-top: 1px solid rgba(138, 153, 158, 0.2);
+}
+
+/* --- ZONE BACKGROUNDS --- */
+.zone-bg { rx: 12; ry: 12; stroke: none; }
+.zone-bg-sources     { fill: rgba(138, 153, 158, 0.05); }
+.zone-bg-ingestion   { fill: rgba(113, 211, 220, 0.05); }
+.zone-bg-snowflake   { fill: rgba(17, 86, 127, 0.07); }
+.zone-bg-compute     { fill: rgba(125, 68, 207, 0.05); }
+.zone-bg-app         { fill: rgba(125, 68, 207, 0.04); }
+.zone-bg-consumers   { fill: rgba(255, 159, 54, 0.05); }
+.zone-bg-governance  { fill: rgba(212, 91, 144, 0.05); }
+.zone-bg-neutral     { fill: rgba(138, 153, 158, 0.04); }
+
+.zone-title {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    fill: var(--sf-dark);
+}
+
+.zone-subtitle {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9px; font-weight: 400; fill: var(--sf-gray);
+}
+
+/* --- NESTED ZONE (box-in-box) --- */
+.nested-zone {
+    fill: none;
+    stroke: var(--sf-neutral);
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+    rx: 6; ry: 6;
+    opacity: 0.6;
+}
+
+.nested-zone-title {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    fill: var(--sf-gray);
+}
+
+/* --- NODE STYLES --- */
+.node { cursor: pointer; transition: filter var(--duration) var(--ease-out-expo); }
+.node:hover { filter: drop-shadow(0 2px 8px rgba(41, 181, 232, 0.3)); }
+
+.node-body {
+    fill: var(--sf-white); stroke: var(--sf-blue);
+    stroke-width: 1.5; rx: 8; ry: 8;
+    transition: stroke var(--duration), fill var(--duration);
+}
+.node:hover .node-body { stroke: var(--sf-star-blue); stroke-width: 2; }
+
+.node-body-snowflake { stroke: var(--sf-blue); fill: rgba(41, 181, 232, 0.08); }
+.node-body-source    { stroke: var(--sf-neutral); }
+.node-body-ingestion { stroke: var(--sf-star-blue); }
+.node-body-compute   { stroke: var(--sf-purple); }
+.node-body-app       { stroke: var(--sf-purple); fill: rgba(125, 68, 207, 0.06); }
+.node-body-consumer  { stroke: var(--sf-orange); }
+.node-body-highlight { stroke: var(--sf-orange); stroke-width: 2; fill: rgba(255, 159, 54, 0.08); }
+.node-body-governance{ stroke: var(--sf-pink); }
+
+.node-label {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px; font-weight: 700; fill: var(--sf-dark);
+    text-anchor: middle; dominant-baseline: central;
+    pointer-events: none;
+}
+
+.node-sublabel {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 8px; font-weight: 400; fill: var(--sf-gray);
+    text-anchor: middle; dominant-baseline: central;
+    pointer-events: none;
+}
+
+/* --- NODE ICON --- */
+.node-icon {
+    fill: none; stroke: var(--sf-neutral);
+    stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+}
+
+.node-body-snowflake ~ .node-icon { stroke: var(--sf-blue); }
+.node-body-ingestion ~ .node-icon { stroke: var(--sf-star-blue); }
+.node-body-compute ~ .node-icon,
+.node-body-app ~ .node-icon       { stroke: var(--sf-purple); }
+.node-body-consumer ~ .node-icon  { stroke: var(--sf-orange); }
+.node-body-highlight ~ .node-icon { stroke: var(--sf-orange); }
+.node-body-governance ~ .node-icon{ stroke: var(--sf-pink); }
+
+/* --- PAIN BADGE --- */
+.pain-badge circle {
+    filter: drop-shadow(0 1px 3px rgba(255, 159, 54, 0.4));
+    transition: transform var(--duration);
+}
+.pain-badge:hover circle { transform: scale(1.2); }
+
+/* --- CONNECTORS --- */
+.connector {
+    fill: none; stroke: var(--sf-neutral);
+    stroke-width: 1.5; stroke-linecap: round;
+}
+
+.connector-primary   { stroke: var(--sf-blue); }
+.connector-secondary { stroke: var(--sf-star-blue); }
+.connector-highlight { stroke: var(--sf-orange); stroke-width: 2; }
+.connector-dashed    { stroke-dasharray: 6 4; }
+.connector-subtle    { stroke: var(--sf-light-gray); stroke-width: 1; }
+
+.connector-animated {
+    stroke: var(--sf-blue); stroke-width: 2;
+    stroke-dasharray: 8 6;
+    animation: flowDash 1.5s linear infinite;
+}
+
+@keyframes flowDash { to { stroke-dashoffset: -28; } }
+
+.connector-label {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 8px; font-weight: 400; fill: var(--sf-gray);
+    text-anchor: middle; dominant-baseline: central;
+}
+.connector-label-bg { fill: var(--sf-white); rx: 3; ry: 3; }
+
+/* --- TOOLTIP --- */
+.tooltip {
+    position: fixed; display: none;
+    background: var(--sf-dark); color: var(--sf-white);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px; line-height: 1.4;
+    padding: 8px 12px; border-radius: 6px;
+    max-width: 300px; pointer-events: none;
+    z-index: 1000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0; transition: opacity 0.2s ease;
+}
+.tooltip.visible { display: block; opacity: 1; }
+.tooltip-title { font-weight: 700; margin-bottom: 4px; color: var(--sf-star-blue); }
+.tooltip-pain {
+    display: block; margin-top: 6px; padding-top: 6px;
+    border-top: 1px solid rgba(255, 159, 54, 0.4);
+    color: var(--sf-orange); font-weight: 600;
+}
+
+/* --- RESPONSIVE --- */
+@media (max-height: 600px) {
+    .diagram-header h1 { font-size: clamp(1rem, 2.5vw, 1.5rem); }
+    .diagram-subtitle { display: none; }
+    .diagram-footer { padding: 2px var(--diagram-padding); }
+}
+
+@media (max-width: 600px) {
+    .diagram-header { flex-wrap: wrap; gap: 0.3rem; }
+    .diagram-subtitle { width: 100%; margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.15s !important;
+    }
+    .connector-animated { animation: none; stroke-dasharray: 6 4; }
+}
+
+.zone-note { font-family: Arial, Helvetica, sans-serif; font-size: 10px; fill: var(--sf-gray); }
+
+</style>
+</head>
+<body>
+<div class="diagram-container" id="diagramContainer">
+  <header class="diagram-header">
+<div class="header-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1800" fill="#29B5E8" aria-label="Snowflake">
+        <g transform="translate(0,1800) scale(1,-1)">
+            <path d="M653 1775c-55-23-65-53-66-201-1-74-3-134-5-134-4 0-125 67-184 101-29 17-58 27-75 25-15-2-33-4-40-5-26-2-62-49-68-87-10-68 11-87 236-215 112-64 215-119 228-122 35-8 96 20 112 51 16 33 23 469 8 518-18 60-88 93-146 69z"/>
+            <path d="M1063 1779c-17-5-42-24-54-41-22-31-23-39-24-271 0-258 4-283 50-313 52-34 80-24 298 100 113 65 213 126 222 136 21 23 29 78 16 112-12 33-65 68-101 68-14 0-61-20-104-45-44-25-81-45-84-45-2 0-17-9-33-21-16-11-32-18-36-16-5 3-7 58-7 124 2 129-9 172-48 196-34 22-59 26-95 16z"/>
+            <path d="M78 1212c-80-40-82-138-5-190 23-16 47-31 52-33 24-9 145-84 145-89 0-3-26-20-58-38-173-98-177-101-192-147-14-41 6-95 43-119 47-31 86-23 192 39 55 32 116 67 135 77 198 113 210 123 216 181 6 50-21 83-109 135-204 120-334 191-359 196-14 2-41-3-60-12z"/>
+            <path d="M1640 1221c-21-7-313-171-389-219-35-22-61-52-62-71-5-64 7-97 44-121 12-7 106-62 209-121 218-125 240-131 297-83 38 32 49 80 27 126-13 26-41 47-132 100l-117 67 54 33c30 18 63 39 74 45 11 7 37 22 58 33 90 49 100 152 18 198-42 24-44 24-81 13z"/>
+            <path d="M778 1022c-120-116-120-124 0-243 115-114 122-114 238 2 119 119 119 126-24 263-91 87-103 86-214-22zm165-80c34-35 34-42-3-81-42-43-65-39-104 21-17 26-17 27 13 57 38 38 60 39 94 3z"/>
+            <path d="M610 634c-254-141-364-209-381-238-45-72 19-171 104-162 14 2 73 31 132 64 59 34 110 62 114 62 4 0 7-60 8-134 0-115 3-137 19-159 46-62 140-63 181 0 16 24 18 54 20 258 0 126-3 246-8 265-9 38-53 72-99 77-14 2-53-12-90-33z"/>
+            <path d="M1065 663c-28-7-62-41-73-72-4-14-8-132-7-261 1-204 4-239 19-262 47-71 167-59 194 20 5 15 8 82 8 149-2 144-13 139 130 57 105-61 134-69 182-49 58 25 79 114 39 166-18 24-414 249-445 253-15 3-36 2-47-1z"/>
+        </g>
+    </svg>
+</div>
+
+    <h1>Singapore Retail Customer 360</h1>
+    <span class="diagram-subtitle">AWS Firehose + Bedrock + QuickSight on Snowflake</span>
+  </header>
+  <svg class="diagram-canvas" id="diagramCanvas" viewBox="0 0 1400 700" preserveAspectRatio="xMidYMid meet"
+       xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture diagram">
+    <defs>
+      <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" fill="#29B5E8">
+        <polygon points="0 0, 10 3.5, 0 7" />
+      </marker>
+      <marker id="arrowhead-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" fill="#FF9F36">
+        <polygon points="0 0, 10 3.5, 0 7" />
+      </marker>
+      <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="130%">
+        <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000000" flood-opacity="0.08" />
+      </filter>
+    </defs>
+        <rect class="zone-bg zone-bg-ingestion" x="40" y="30" width="440" height="160" />
+        <text class="zone-title" x="52" y="48">AWS INGESTION</text>
+        <text class="zone-subtitle" x="52" y="62">your AWS account · us-west-2</text>
+        <rect class="zone-bg zone-bg-snowflake" x="482" y="30" width="768" height="640" />
+        <text class="zone-title" x="494" y="48">SNOWFLAKE</text>
+        <rect class="zone-bg zone-bg-consumers" x="1252" y="30" width="108" height="640" />
+        <text class="zone-title" x="1264" y="48">AWS AI + BI</text>
+        <text class="zone-note" x="500" y="630">SINGAPORE_RETAIL_CUSTOMER_360_AWS · synthetic demo data</text>
+        <text class="zone-note" x="500" y="646">Every flow shown is built by the scripts in this repository.</text>
+        <path class="connector connector-animated" d="M141,150 L159,150" marker-end="url(#arrowhead-blue)" />
+        <path class="connector connector-animated" d="M251,150 L269,150" marker-end="url(#arrowhead-blue)" />
+        <path class="connector connector-animated" d="M361,150 L379,150" marker-end="url(#arrowhead-blue)" />
+        <path class="connector connector-animated" d="M471,150 L489,150" marker-end="url(#arrowhead-blue)" />
+        <path class="connector connector-animated" d="M581,150 L599,150" marker-end="url(#arrowhead-blue)" />
+        <path class="connector connector-secondary" d="M645,124 L645,78 Q645,70 653,70 L709,70" marker-end="url(#arrowhead-blue)" />
+        <path class="connector connector-animated" d="M691,150 L1259,150" marker-end="url(#arrowhead-blue)" />
+        <rect class="connector-label-bg" x="1148" y="134" width="63" height="12" />
+        <text class="connector-label" x="1180" y="140">DIRECT_QUERY</text>
+        <path class="connector connector-primary" d="M1085,150 L1085,284" marker-end="url(#arrowhead-blue)" />
+        <rect class="connector-label-bg" x="1074" y="211" width="77" height="12" />
+        <text class="connector-label" x="1112" y="217">Live Engagement</text>
+        <path class="connector connector-primary" d="M755,284 L755,158 Q755,150 763,150" />
+        <rect class="connector-label-bg" x="760" y="211" width="40" height="12" />
+        <text class="connector-label" x="780" y="217">curated</text>
+        <path class="connector connector-primary" d="M895,284 L895,158 Q895,150 903,150" />
+        <rect class="connector-label-bg" x="899" y="211" width="26" height="12" />
+        <text class="connector-label" x="912" y="217">risk</text>
+        <path class="connector connector-primary" d="M581,310 L599,310" marker-end="url(#arrowhead-blue)" />
+        <path class="connector connector-primary" d="M691,310 L709,310" marker-end="url(#arrowhead-blue)" />
+        <path class="connector connector-primary" d="M801,310 L819,310" marker-end="url(#arrowhead-blue)" />
+        <path class="connector connector-primary" d="M911,310 L1039,310" marker-end="url(#arrowhead-blue)" />
+        <rect class="connector-label-bg" x="950" y="294" width="49" height="12" />
+        <text class="connector-label" x="975" y="300">/api/data</text>
+        <path class="connector connector-highlight" d="M1131,310 L1149,310" marker-end="url(#arrowhead-orange)" />
+        <path class="connector connector-highlight" d="M1241,310 L1259,310" marker-end="url(#arrowhead-orange)" />
+        <path class="connector connector-subtle" d="M755,444 L755,336" />
+        <rect class="connector-label-bg" x="715" y="384" width="40" height="12" />
+        <text class="connector-label" x="735" y="390">refresh</text>
+        <path class="connector connector-primary" d="M865,336 L865,382 Q865,390 873,390 L967,390 Q975,390 975,398 L975,444" marker-end="url(#arrowhead-blue)" />
+        <rect class="connector-label-bg" x="888" y="374" width="68" height="12" />
+        <text class="connector-label" x="922" y="380">semantic view</text>
+        <path class="connector connector-primary" d="M911,470 L929,470" marker-end="url(#arrowhead-blue)" />
+        <path class="connector connector-primary" d="M1021,470 L1077,470 Q1085,470 1085,462 L1085,336" marker-end="url(#arrowhead-blue)" />
+        <rect class="connector-label-bg" x="1023" y="454" width="54" height="12" />
+        <text class="connector-label" x="1050" y="460">/api/agent</text>
+        <g class="node" transform="translate(95, 150)" data-tooltip-title="Engagement sim" data-tooltip="Sends synthetic engagement events (cohort, basket amount in SGD, service response minutes, status) to Amazon Data Firehose with PutRecordBatch."><rect class="node-body node-body-source" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Engagement sim</text><text class="node-sublabel" x="0" y="10">publish_engagement.py</text></g>
+        <g class="node" transform="translate(205, 150)" data-tooltip-title="Data Firehose" data-tooltip="Firehose stream sg-retail-customer-360-engagement (Direct PUT); buffers up to 60 s or 1 MB, then writes newline-delimited JSON to S3 under engagement/."><rect class="node-body node-body-ingestion" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Data Firehose</text><text class="node-sublabel" x="0" y="10">Direct PUT stream</text></g>
+        <g class="node" transform="translate(315, 150)" data-tooltip-title="Amazon S3" data-tooltip="JSON objects land under the engagement/ prefix; read through storage integration SG_RETAIL_CUSTOMER_360_S3_INT. Firehose errors go to firehose-errors/."><rect class="node-body node-body-ingestion" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Amazon S3</text><text class="node-sublabel" x="0" y="10">landing bucket</text></g>
+        <g class="node" transform="translate(425, 150)" data-tooltip-title="Amazon SQS" data-tooltip="S3 object-created events go to the Snowpipe-managed SQS queue (AUTO_INGEST)."><rect class="node-body node-body-ingestion" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Amazon SQS</text><text class="node-sublabel" x="0" y="10">S3 event notification</text></g>
+        <g class="node" transform="translate(535, 150)" data-tooltip-title="Snowpipe" data-tooltip="Serverless COPY from the external stage into RAW.LIVE_ENGAGEMENT."><rect class="node-body node-body-snowflake" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Snowpipe</text><text class="node-sublabel" x="0" y="10">AUTO_INGEST</text></g>
+        <g class="node" transform="translate(645, 150)" data-tooltip-title="Live engagement" data-tooltip="RAW.LIVE_ENGAGEMENT: landed engagement events. Feeds the Live Engagement tab, the service-issue alert and the QuickSight events dataset."><rect class="node-body node-body-snowflake" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Live engagement</text><text class="node-sublabel" x="0" y="10">RAW schema</text></g>
+        <g class="node" transform="translate(755, 70)" data-tooltip-title="Alert + email" data-tooltip="APP.LIVE_ENGAGEMENT_ALERT fires on ISSUE events, writes APP.ALERT_LOG and sends email through SYSTEM$SEND_EMAIL (SG_RETAIL_CUSTOMER_360_EMAIL_INT). Suspended between demos."><rect class="node-body node-body-governance" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Alert + email</text><text class="node-sublabel" x="0" y="10">on ISSUE</text></g>
+        <g class="node" transform="translate(535, 310)" data-tooltip-title="Synthetic seed" data-tooltip="Synthetic loyalty cohorts in 5 Singapore planning areas, daily aggregate cohort observations and profile field completeness created by 02_raw_tables.sql. No individual customer records."><rect class="node-body node-body-source" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Synthetic seed</text><text class="node-sublabel" x="0" y="10">deterministic SQL</text></g>
+        <g class="node" transform="translate(645, 310)" data-tooltip-title="RAW tables" data-tooltip="Source-of-truth synthetic tables in the RAW schema."><rect class="node-body node-body-snowflake" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">RAW tables</text><text class="node-sublabel" x="0" y="10">cohorts · days · profiles</text></g>
+        <g class="node" transform="translate(755, 310)" data-tooltip-title="Curated DTs" data-tooltip="Curated dynamic tables compute numerator/denominator metrics (issue-free purchase rate, issue churn rate, CRM touch compliance, profile completeness). Suspended after initialization."><rect class="node-body node-body-snowflake" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Curated DTs</text><text class="node-sublabel" x="0" y="10">dynamic tables</text></g>
+        <g class="node" transform="translate(865, 310)" data-tooltip-title="Snowflake ML" data-tooltip="CLASSIFICATION churn risk to ML.CHURN_RISK_SCORES (time-based holdout), 14-day service-issue FORECAST, ANOMALY_DETECTION to ML.RETURN_RATE_ANOMALIES."><rect class="node-body node-body-compute" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Snowflake ML</text><text class="node-sublabel" x="0" y="10">3 models</text></g>
+        <g class="node" transform="translate(1085, 310)" data-tooltip-title="Next.js app" data-tooltip="APP.SG_RETAIL_CUSTOMER_360_APP. Routes /api/data, /api/agent, /api/ask."><rect class="node-body node-body-app" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Next.js app</text><text class="node-sublabel" x="0" y="10">SPCS service</text></g>
+        <g class="node" transform="translate(1195, 310)" data-tooltip-title="Bedrock UDF" data-tooltip="Python UDF APP.BEDROCK_GENERATE calls Bedrock with boto3 through external access integration SG_RETAIL_CUSTOMER_360_BEDROCK_EAI. Used by /api/ask for the action memo."><rect class="node-body node-body-compute" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Bedrock UDF</text><text class="node-sublabel" x="0" y="10">external access</text></g>
+        <g class="node" transform="translate(1305, 310)" data-tooltip-title="Amazon Bedrock" data-tooltip="Inference profile us.anthropic.claude-sonnet-4-5-20250929-v1:0 in us-west-2."><rect class="node-body node-body-consumer" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Amazon Bedrock</text><text class="node-sublabel" x="0" y="10">Claude Sonnet 4.5</text></g>
+        <g class="node" transform="translate(1305, 150)" data-tooltip-title="QuickSight + Q" data-tooltip="DIRECT_QUERY dashboard sg-retail-customer-360-dashboard and Q topic sg-retail-customer-360-topic, through a PAT-only, role-restricted Snowflake service user."><rect class="node-body node-body-consumer" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">QuickSight + Q</text><text class="node-sublabel" x="0" y="10">dashboard · Q topic</text></g>
+        <g class="node" transform="translate(755, 470)" data-tooltip-title="Task graph" data-tooltip="APP.TASK_REFRESH_CURATED refreshes the curated DTs, then TASK_RESCORE_RISK rescores churn risk. Run on demand."><rect class="node-body node-body-snowflake" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Task graph</text><text class="node-sublabel" x="0" y="10">refresh → rescore</text></g>
+        <g class="node" transform="translate(865, 470)" data-tooltip-title="Cortex Search" data-tooltip="SEARCH.ISSUE_SOP_SEARCH over the synthetic service-issue handling SOPs."><rect class="node-body node-body-compute" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Cortex Search</text><text class="node-sublabel" x="0" y="10">service-issue SOPs</text></g>
+        <g class="node" transform="translate(975, 470)" data-tooltip-title="Cortex Agent" data-tooltip="APP.CUSTOMER360_AGENT: Cortex Analyst over semantic view APP.CUSTOMER360_ANALYTICS plus Cortex Search for SOP citations."><rect class="node-body node-body-compute" x="-46" y="-26" width="92" height="52" rx="8" ry="8" filter="url(#dropShadow)" /><text class="node-label" x="0" y="-6">Cortex Agent</text><text class="node-sublabel" x="0" y="10">analyst + search</text></g>
+  </svg>
+  <footer class="diagram-footer">
+    <span>Hover nodes for details · scroll to zoom · drag to pan · R reset · F fullscreen</span>
+    <span>&copy; 2026 Snowflake Inc. All rights reserved.</span>
+  </footer>
+</div>
+<div class="tooltip" id="tooltip"></div>
+<script>
+class DiagramController {
+    constructor(svgId, containerId) {
+        this.svg = document.getElementById(svgId);
+        this.container = document.getElementById(containerId);
+        if (!this.svg) return;
+
+        this.viewBox = { x: 0, y: 0, w: 1400, h: 700 };
+        this.parseViewBox();
+
+        this.isPanning = false;
+        this.startPoint = { x: 0, y: 0 };
+        this.scale = 1;
+        this.minScale = 0.5;
+        this.maxScale = 3;
+
+        this.setupZoom();
+        this.setupPan();
+        this.setupTooltips();
+        this.setupKeyboard();
+    }
+
+    parseViewBox() {
+        const vb = this.svg.getAttribute('viewBox');
+        if (vb) {
+            const parts = vb.split(/[\s,]+/).map(Number);
+            if (parts.length === 4) {
+                this.viewBox = { x: parts[0], y: parts[1], w: parts[2], h: parts[3] };
+                this.originalViewBox = { ...this.viewBox };
+            }
+        }
+    }
+
+    updateViewBox() {
+        this.svg.setAttribute('viewBox',
+            `${this.viewBox.x} ${this.viewBox.y} ${this.viewBox.w} ${this.viewBox.h}`);
+    }
+
+    setupZoom() {
+        this.svg.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const direction = e.deltaY > 0 ? 1.1 : 0.9;
+            const newW = this.viewBox.w * direction;
+            const newH = this.viewBox.h * direction;
+            const newScale = this.originalViewBox.w / newW;
+
+            if (newScale < this.minScale || newScale > this.maxScale) return;
+
+            const rect = this.svg.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) / rect.width;
+            const mouseY = (e.clientY - rect.top) / rect.height;
+
+            this.viewBox.x -= (newW - this.viewBox.w) * mouseX;
+            this.viewBox.y -= (newH - this.viewBox.h) * mouseY;
+            this.viewBox.w = newW;
+            this.viewBox.h = newH;
+            this.scale = newScale;
+            this.updateViewBox();
+        }, { passive: false });
+    }
+
+    setupPan() {
+        this.svg.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            this.isPanning = true;
+            this.startPoint = { x: e.clientX, y: e.clientY };
+            this.svg.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!this.isPanning) return;
+            const rect = this.svg.getBoundingClientRect();
+            const dx = (e.clientX - this.startPoint.x) * (this.viewBox.w / rect.width);
+            const dy = (e.clientY - this.startPoint.y) * (this.viewBox.h / rect.height);
+            this.viewBox.x -= dx;
+            this.viewBox.y -= dy;
+            this.startPoint = { x: e.clientX, y: e.clientY };
+            this.updateViewBox();
+        });
+
+        window.addEventListener('mouseup', () => {
+            this.isPanning = false;
+            this.svg.style.cursor = 'grab';
+        });
+
+        let lastTouchDist = 0;
+        this.svg.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                this.isPanning = true;
+                this.startPoint = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            } else if (e.touches.length === 2) {
+                this.isPanning = false;
+                lastTouchDist = Math.hypot(
+                    e.touches[1].clientX - e.touches[0].clientX,
+                    e.touches[1].clientY - e.touches[0].clientY
+                );
+            }
+        }, { passive: true });
+
+        this.svg.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1 && this.isPanning) {
+                const rect = this.svg.getBoundingClientRect();
+                const dx = (e.touches[0].clientX - this.startPoint.x) * (this.viewBox.w / rect.width);
+                const dy = (e.touches[0].clientY - this.startPoint.y) * (this.viewBox.h / rect.height);
+                this.viewBox.x -= dx;
+                this.viewBox.y -= dy;
+                this.startPoint = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                this.updateViewBox();
+            } else if (e.touches.length === 2) {
+                const dist = Math.hypot(
+                    e.touches[1].clientX - e.touches[0].clientX,
+                    e.touches[1].clientY - e.touches[0].clientY
+                );
+                const pinchScale = lastTouchDist / dist;
+                const newW = this.viewBox.w * pinchScale;
+                const newH = this.viewBox.h * pinchScale;
+                const testScale = this.originalViewBox.w / newW;
+                if (testScale >= this.minScale && testScale <= this.maxScale) {
+                    const rect = this.svg.getBoundingClientRect();
+                    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                    const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                    this.viewBox.x -= (newW - this.viewBox.w) * ((cx - rect.left) / rect.width);
+                    this.viewBox.y -= (newH - this.viewBox.h) * ((cy - rect.top) / rect.height);
+                    this.viewBox.w = newW;
+                    this.viewBox.h = newH;
+                    this.scale = testScale;
+                    this.updateViewBox();
+                }
+                lastTouchDist = dist;
+            }
+        }, { passive: true });
+
+        this.svg.addEventListener('touchend', () => { this.isPanning = false; }, { passive: true });
+    }
+
+    setupTooltips() {
+        const tooltip = document.getElementById('tooltip');
+        if (!tooltip) return;
+
+        this.svg.querySelectorAll('[data-tooltip]').forEach(node => {
+            node.addEventListener('mouseenter', () => {
+                const text = node.getAttribute('data-tooltip');
+                const title = node.getAttribute('data-tooltip-title') || '';
+                if (!text) return;
+                tooltip.innerHTML = title
+                    ? `<div class="tooltip-title">${title}</div>${text}`
+                    : text;
+                tooltip.classList.add('visible');
+            });
+
+            node.addEventListener('mousemove', (e) => {
+                const pad = 12;
+                let left = e.clientX + pad;
+                let top = e.clientY + pad;
+                const r = tooltip.getBoundingClientRect();
+                if (left + r.width > window.innerWidth) left = e.clientX - r.width - pad;
+                if (top + r.height > window.innerHeight) top = e.clientY - r.height - pad;
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = top + 'px';
+            });
+
+            node.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+        });
+    }
+
+    setupKeyboard() {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r' || e.key === 'R') {
+                this.viewBox = { ...this.originalViewBox };
+                this.scale = 1;
+                this.updateViewBox();
+            } else if (e.key === 'f' || e.key === 'F') {
+                if (!document.fullscreenElement) {
+                    this.container.requestFullscreen().catch(() => {});
+                } else {
+                    document.exitFullscreen();
+                }
+            } else if (e.key === '+' || e.key === '=') {
+                this.zoomBy(0.85);
+            } else if (e.key === '-') {
+                this.zoomBy(1.15);
+            }
+        });
+    }
+
+    zoomBy(factor) {
+        const newW = this.viewBox.w * factor;
+        const newH = this.viewBox.h * factor;
+        const testScale = this.originalViewBox.w / newW;
+        if (testScale < this.minScale || testScale > this.maxScale) return;
+        this.viewBox.x -= (newW - this.viewBox.w) * 0.5;
+        this.viewBox.y -= (newH - this.viewBox.h) * 0.5;
+        this.viewBox.w = newW;
+        this.viewBox.h = newH;
+        this.scale = testScale;
+        this.updateViewBox();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new DiagramController('diagramCanvas', 'diagramContainer');
+});
+
+</script>
+</body>
+</html>

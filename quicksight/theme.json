@@ -1,0 +1,52 @@
+{
+  "UIColorPalette": {
+    "PrimaryForeground": "#1B2A4A",
+    "PrimaryBackground": "#FFFFFF",
+    "SecondaryForeground": "#64748B",
+    "SecondaryBackground": "#F8FAFC",
+    "Accent": "#29B5E8",
+    "AccentForeground": "#FFFFFF",
+    "Danger": "#EF4444",
+    "DangerForeground": "#FFFFFF",
+    "Warning": "#F59E0B",
+    "WarningForeground": "#1B2A4A",
+    "Success": "#10B981",
+    "SuccessForeground": "#FFFFFF"
+  },
+  "DataColorPalette": {
+    "Colors": [
+      "#29B5E8",
+      "#FF6B35",
+      "#10B981",
+      "#F59E0B",
+      "#8B5CF6",
+      "#EF4444",
+      "#6366F1",
+      "#EC4899"
+    ],
+    "MinMaxGradient": ["#E8F4FD", "#29B5E8"],
+    "EmptyFillColor": "#E2E8F0"
+  },
+  "Sheet": {
+    "Tile": {
+      "Border": {
+        "Show": true
+      }
+    },
+    "TileLayout": {
+      "Gutter": {
+        "Show": true
+      },
+      "Margin": {
+        "Show": true
+      }
+    }
+  },
+  "Typography": {
+    "FontFamilies": [
+      {
+        "FontFamily": "Amazon Ember"
+      }
+    ]
+  }
+}

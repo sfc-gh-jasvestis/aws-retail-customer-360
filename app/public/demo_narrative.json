@@ -1,0 +1,142 @@
+{
+  "title": "Singapore Retail Customer 360",
+  "duration": "6 minutes",
+  "thesis": "On one governed platform, Snowflake turns aggregate daily activity from synthetic loyalty cohorts of Kopi Lane Retail, a fictional Singapore omnichannel retailer, into retention KPIs in SGD, 7-day churn risk per cohort, return rate anomalies and AI answers that cite their sources.",
+  "tabs": [
+    {
+      "id": "executive-cockpit",
+      "persona": {
+        "name": "Wen Hui Chua",
+        "role": "Head of Customer Retention (fictional)",
+        "avatar": ""
+      },
+      "talking_points": [
+        "48 loyalty cohorts shop at Kopi Lane Retail malls and online in five Singapore planning areas: Orchard, Tampines, Jurong East, Woodlands and Punggol. The cards show issue-free purchase rate, service issues, churned members and revenue in SGD.",
+        "Each KPI is a numerator over a denominator in a curated dynamic table, so you can trace it to cohort-day rows. No individual customer records are stored.",
+        "The issue-type chart separates issues that end in churn from ones that are always resolved, such as the mall checkout outages in Jurong East and Woodlands."
+      ],
+      "show": [
+        "KPI cards",
+        "Daily service issues",
+        "Service issues by type",
+        "Cohort table"
+      ],
+      "call_out": "Customer KPIs you can trace to source rows",
+      "transition": {
+        "next_tab": "predictive",
+        "line": "Which cohorts need a retention review first?"
+      }
+    },
+    {
+      "id": "predictive",
+      "persona": {
+        "name": "Hafiz Osman",
+        "role": "CRM and Loyalty Analyst (fictional)",
+        "avatar": ""
+      },
+      "talking_points": [
+        "A Snowflake ML classifier estimates, per cohort, the chance of a churn event in the next 7 days.",
+        "Precision and recall come from the latest 14 labelled days held out of training, shown next to the base rate.",
+        "Anomaly detection picks out unusual cohort return rates, and the forecast covers the next 14 days of service issues."
+      ],
+      "show": [
+        "Holdout metrics",
+        "Risk by cohort",
+        "Service-issue forecast",
+        "Return rate anomalies"
+      ],
+      "call_out": "ML that is evaluated honestly, next to the data",
+      "transition": {
+        "next_tab": "planning",
+        "line": "Are we keeping in touch with every cohort?"
+      }
+    },
+    {
+      "id": "planning",
+      "persona": {
+        "name": "Wen Hui Chua",
+        "role": "Head of Customer Retention (fictional)",
+        "avatar": ""
+      },
+      "talking_points": [
+        "CRM touch compliance, profile completeness and pending profile fields show where engagement is slipping.",
+        "Plotting CRM touch compliance against churned members per cohort shows where the two move together; that is an association, not a cause.",
+        "The action memo proposes three prioritised actions using only the KPI, cohort, issue-type and risk rows."
+      ],
+      "show": [
+        "CRM touch compliance and profile completeness",
+        "CRM touch compliance vs churned members",
+        "Action memo"
+      ],
+      "call_out": "Draft actions grounded in data, reviewed by a person",
+      "transition": {
+        "next_tab": "live",
+        "line": "What happens when a member hits a problem right now?"
+      }
+    },
+    {
+      "id": "live",
+      "persona": {
+        "name": "Hafiz Osman",
+        "role": "CRM and Loyalty Analyst (fictional)",
+        "avatar": ""
+      },
+      "talking_points": [
+        "New engagement events arrive in RAW.LIVE_ENGAGEMENT, either from the simulator or from Amazon Data Firehose through Snowpipe.",
+        "The alert records each ISSUE event with an SOP hint and the risk band of the cohort, then emails the on-call retention analyst."
+      ],
+      "show": [
+        "Events loaded and lag",
+        "Latest engagement events",
+        "Alert log"
+      ],
+      "call_out": "From a live service issue to a retention case on one platform",
+      "transition": {
+        "next_tab": "ask-ai",
+        "line": "Let's ask the data directly."
+      }
+    },
+    {
+      "id": "ask-ai",
+      "persona": {
+        "name": "Wen Hui Chua",
+        "role": "Head of Customer Retention (fictional)",
+        "avatar": ""
+      },
+      "talking_points": [
+        "The Cortex Agent answers metric questions with Cortex Analyst over the semantic view, and procedure questions with Cortex Search over 14 synthetic SOPs.",
+        "Every answer shows the SQL it generated and the SOP IDs it cited."
+      ],
+      "show": [
+        "Ask a sample question",
+        "Generated SQL",
+        "SOP citations"
+      ],
+      "call_out": "Answers in plain language that you can check",
+      "transition": {
+        "next_tab": "architecture",
+        "line": "This is how it fits together."
+      }
+    },
+    {
+      "id": "architecture",
+      "persona": {
+        "name": "Wen Hui Chua",
+        "role": "Head of Customer Retention (fictional)",
+        "avatar": ""
+      },
+      "talking_points": [
+        "One core supports two builds: Snowflake only, or AWS + Snowflake with Data Firehose, Bedrock, QuickSight and Amazon Q.",
+        "All data shown is synthetic and aggregate, and rebuilds the same way from the repo."
+      ],
+      "show": [
+        "Both architecture diagrams"
+      ],
+      "call_out": "A governed core with an optional AWS edge",
+      "transition": {
+        "next_tab": "",
+        "line": "Questions?"
+      }
+    }
+  ]
+}

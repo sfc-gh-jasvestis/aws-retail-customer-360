@@ -1,0 +1,20 @@
+spec:
+  containers:
+    - name: app
+      image: /{{database}}/{{schema}}/{{repo}}/{{image}}:latest
+      env:
+        DATABASE: "{{database}}"
+        SCHEMA: "{{schema}}"
+        WAREHOUSE: "{{warehouse}}"
+        HOST: "{{host}}"
+      resources:
+        requests:
+          cpu: 0.5
+          memory: 512M
+        limits:
+          cpu: 1
+          memory: 1G
+  endpoints:
+    - name: app
+      port: 8080
+      public: true

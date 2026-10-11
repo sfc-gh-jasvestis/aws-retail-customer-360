@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "repo": "aws-singapore-retail-customer-360",
+  "operation": "on-demand",
+  "data_classification": "synthetic demonstration only",
+  "currency": "SGD",
+  "setting": "Kopi Lane Retail, a fictional Singapore omnichannel retailer; cohorts in 5 Singapore planning areas (Orchard, Tampines, Jurong East, Woodlands, Punggol)",
+  "grains": {
+    "RAW.COHORTS": "one row per loyalty cohort (Singapore planning area and shopper segment); aggregate, no individual customers",
+    "RAW.COHORT_DAILY": "one row per cohort per day (90 days)",
+    "RAW.PROFILE_FIELDS": "one row per cohort (profile field completeness snapshot)",
+    "CURATED.PERFORMANCE_SUMMARY": "one row per cohort",
+    "CURATED.TREND_ANALYSIS": "one row per day",
+    "CURATED.ISSUE_SUMMARY": "one row per service issue type",
+    "CURATED.KPI_SUMMARY": "one row per KPI",
+    "ML.CHURN_RISK_SCORES": "one row per cohort (latest day)"
+  },
+  "metrics": {
+    "Issue-Free Purchase Rate": "100 * (SUM(PURCHASE_COUNT) - SUM(ISSUE_COUNT)) / SUM(PURCHASE_COUNT)",
+    "Service Issues Raised": "SUM(ISSUE_COUNT)",
+    "Churned Members": "SUM(CHURNED_COUNT)",
+    "Issue Churn Rate": "100 * SUM(CHURNED_COUNT) / SUM(ISSUE_COUNT)",
+    "Unsubscribes": "SUM(UNSUBSCRIBED)",
+    "Revenue (SGD M)": "SUM(REVENUE_SGD) / 1e6",
+    "Purchases Made": "SUM(PURCHASE_COUNT)",
+    "CRM Touch Compliance": "100 * SUM(TOUCH_DONE) / SUM(TOUCH_DUE)",
+    "Cohorts Monitored": "COUNT(RAW.COHORTS)",
+    "Profile Completeness": "100 * SUM(LEAST(ON_FILE_QTY, REQUIRED_QTY)) / SUM(REQUIRED_QTY)",
+    "Profile Fields Pending": "SUM(PENDING_QTY)"
+  },
+  "chart_bindings": {
+    "daily_service_issues": [
+      "CURATED.TREND_ANALYSIS.METRIC_DATE",
+      "ISSUE_COUNT",
+      "CHURNED_COUNT"
+    ],
+    "issues_by_type": [
+      "CURATED.ISSUE_SUMMARY.ISSUE_TYPE",
+      "ISSUE_COUNT",
+      "CHURNED_COUNT"
+    ],
+    "touch_vs_churned": [
+      "CURATED.PERFORMANCE_SUMMARY.TOUCH_PCT",
+      "CHURNED_COUNT"
+    ],
+    "quicksight_churn_risk": [
+      "ENTITY_ID",
+      "MAX(CHURN_PROB_7D)"
+    ]
+  },
+  "freshness": "MAX(EVENT_DATE) is an observation watermark; requestedAt is not freshness",
+  "required_capabilities": {
+    "core_pipeline": "Curated KPIs reconcile to a RAW recomputation (run_core.py checks this on every build)",
+    "forecast_and_anomaly": "14-day retailer-wide service-issue FORECAST; return rate ANOMALY_DETECTION (train 75 days, detect last 15)",
+    "search": "Cortex Search SEARCH.ISSUE_SOP_SEARCH over synthetic service-issue handling SOPs (one per shopper segment and issue type)",
+    "semantic_analytics": "Semantic view APP.CUSTOMER360_ANALYTICS and Cortex Agent APP.CUSTOMER360_AGENT using analyst + search tools",
+    "grounded_ai": "Agent answers return generated SQL and SOP citations; the action memo uses only KPI, cohort, issue-type and risk rows",
+    "quicksight": "DIRECT_QUERY dashboard (cohorts, daily service issues, churned members by cohort, churn risk, engagement events loaded) through a read-only Snowflake service user",
+    "quicksight_q": "Amazon Q topic over the curated datasets for natural-language questions",
+    "aws_ingestion": "Amazon Data Firehose -> S3 -> Snowpipe AUTO_INGEST into RAW.LIVE_ENGAGEMENT",
+    "notifications": "APP.LIVE_ENGAGEMENT_ALERT logs new ISSUE events to APP.ALERT_LOG and emails via SYSTEM$SEND_EMAIL; alert and tasks suspended between demos",
+    "orchestration": "Task graph APP.TASK_REFRESH_CURATED -> APP.TASK_RESCORE_RISK run on demand (EXECUTE TASK)",
+    "app_deployment": "SPCS service APP.SG_RETAIL_CUSTOMER_360_APP; routes /api/data, /api/ask, /api/agent",
+    "churn_risk_model": "Snowflake ML CLASSIFICATION of P(churn event for the cohort in the next 7 days), evaluated on an out-of-time holdout"
+  },
+  "builds": {
+    "snowflake": {
+      "database": "SINGAPORE_RETAIL_CUSTOMER_360_SNOWFLAKE",
+      "app_setting": "DEMO_PLATFORM=snowflake",
+      "memo": "Cortex AI_COMPLETE (claude-sonnet-4-5)",
+      "live_engagement": "APP.SIMULATE_ENGAGEMENT(n)"
+    },
+    "aws": {
+      "database": "SINGAPORE_RETAIL_CUSTOMER_360_AWS",
+      "app_setting": "DEMO_PLATFORM=aws",
+      "memo": "Amazon Bedrock Claude Sonnet 4.5 via APP.BEDROCK_GENERATE",
+      "capabilities": "see required_capabilities",
+      "live_engagement": "Amazon Data Firehose -> S3 -> Snowpipe"
+    }
+  }
+}
